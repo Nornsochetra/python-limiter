@@ -1,0 +1,88 @@
+{% extends "sidebar_base.html" %}
+{% block title %}Rate Limit Logs{% endblock %}
+{% block page_title %}Limit Log{% endblock %}
+{% block page_sub %}Every request that was blocked by a rate limit{% endblock %}
+
+{% block content %}
+  {% set ip_count = logs | selectattr('limit_type', 'equalto', 'ip') | list | length %}
+  {% set user_count = logs | selectattr('limit_type', 'equalto', 'user') | list | length %}
+
+  <div class="row row-cols-1 row-cols-sm-3 g-3 mb-4">
+    <div class="col">
+      <div class="card-soft stat-card">
+        <span class="stat-icon indigo"><i class="bi bi-list-ul"></i></span>
+        <div>
+          <div class="stat-value">{{ logs|length }}</div>
+          <div class="stat-label">Total breaches</div>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card-soft stat-card">
+        <span class="stat-icon amber"><i class="bi bi-hdd-network"></i></span>
+        <div>
+          <div class="stat-value">{{ ip_count }}</div>
+          <div class="stat-label">By IP &middot; login / register</div>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card-soft stat-card">
+        <span class="stat-icon green"><i class="bi bi-person-badge"></i></span>
+        <div>
+          <div class="stat-value">{{ user_count }}</div>
+          <div class="stat-label">By user &middot; admin pages</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-soft">
+    <div class="d-flex align-items-center justify-content-between px-3 px-md-4 py-3 border-bottom">
+      <div>
+        <div class="section-title">Blocked requests</div>
+        <div class="section-sub">Newest first &middot; showing up to 200 entries</div>
+      </div>
+      <span class="badge rounded-pill text-bg-light border">{{ logs|length }}</span>
+    </div>
+
+    {% if not logs %}
+      <div class="empty-state">
+        <i class="bi bi-shield-check"></i>
+        No rate limit breaches recorded yet.
+        <div class="small mt-2">
+          Refresh the login page 6 times in a minute to trigger one.
+        </div>
+      </div>
+    {% else %}
+      <div class="table-wrap">
+        <table class="table-clean table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Type</th>
+              <th>IP address</th>
+              <th>User</th>
+              <th>Endpoint</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for log in logs %}
+              <tr>
+                <td class="text-nowrap">{{ log.created_at.strftime('%d %b %Y, %H:%M:%S') }}</td>
+                <td>
+                  <span class="tag {{ 'tag-ip' if log.limit_type == 'ip' else 'tag-user' }}">
+                    {{ log.limit_type }}
+                  </span>
+                </td>
+                <td class="mono">{{ log.ip_address }}</td>
+                <td>{% if log.user_id %}#{{ log.user_id }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                <td class="mono">{{ log.endpoint }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}

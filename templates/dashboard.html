@@ -1,0 +1,184 @@
+{% extends "sidebar_base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_sub %}Upload images and manage your library{% endblock %}
+
+{% block content %}
+  {% if stats %}
+    <div class="row row-cols-1 row-cols-sm-3 g-3 mb-4">
+      <div class="col">
+        <div class="card-soft stat-card">
+          <span class="stat-icon indigo"><i class="bi bi-people-fill"></i></span>
+          <div>
+            <div class="stat-value">{{ stats.user_count }}</div>
+            <div class="stat-label">Total users</div>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card-soft stat-card">
+          <span class="stat-icon green"><i class="bi bi-images"></i></span>
+          <div>
+            <div class="stat-value">{{ stats.image_count }}</div>
+            <div class="stat-label">Total images</div>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card-soft stat-card">
+          <span class="stat-icon amber"><i class="bi bi-shield-exclamation"></i></span>
+          <div>
+            <div class="stat-value">{{ stats.breach_count }}</div>
+            <div class="stat-label">Rate limit breaches</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="card-soft p-3 p-md-4 mb-4">
+    <div class="section-title"><i class="bi bi-cloud-arrow-up me-1"></i>Upload an image</div>
+    <div class="section-sub mb-3">
+      A thumbnail at 50% of the original size is generated automatically.
+    </div>
+
+    <form method="POST" action="{{ url_for('upload') }}" enctype="multipart/form-data"
+          id="uploadForm">
+      <label class="upload-zone d-block mb-3" for="imageInput" style="cursor: pointer;">
+        <i class="bi bi-cloud-arrow-up"></i>
+        <div class="fw-semibold mt-2" id="uploadLabel">Choose an image to upload</div>
+        <div class="section-sub">PNG, JPG or GIF &middot; up to 10 MB</div>
+      </label>
+      <input class="d-none" type="file" name="image" id="imageInput" accept="image/*" required>
+
+      <button class="btn btn-primary" type="submit">
+        <i class="bi bi-upload me-1"></i>Upload
+      </button>
+    </form>
+  </div>
+
+  <div class="d-flex align-items-baseline justify-content-between mb-1">
+    <div>
+      <span class="section-title">My images</span>
+      <span class="badge rounded-pill text-bg-light border ms-1">{{ images|length }}</span>
+    </div>
+  </div>
+  <div class="section-sub mb-3">
+    Each preview below is the <strong>thumbnail</strong>. Use <em>Compare</em> to see it
+    next to the original.
+  </div>
+
+  {% if not images %}
+    <div class="card-soft empty-state">
+      <i class="bi bi-images"></i>
+      No images yet. Upload your first one above.
+    </div>
+  {% endif %}
+
+  <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
+    {% for image in images %}
+      <div class="col">
+        <div class="card-soft img-card h-100 d-flex flex-column">
+          <div class="img-preview">
+            <span class="pill">Thumbnail</span>
+            <img src="{{ url_for('static', filename=image.thumbnail_path) }}"
+                 alt="{{ image.original_filename }}">
+          </div>
+
+          <div class="p-3 d-flex flex-column flex-grow-1">
+            <div class="fw-semibold text-truncate mb-2" title="{{ image.original_filename }}">
+              {{ image.original_filename }}
+            </div>
+
+            <div class="spec">
+              <span class="k">Original</span>
+              <span class="v">
+                {{ image.original_width }}&times;{{ image.original_height }}
+                <span class="text-muted">&middot; {{ image.original_bytes|human_size }}</span>
+              </span>
+            </div>
+            <div class="spec mb-3">
+              <span class="k">Thumbnail</span>
+              <span class="v">
+                {{ image.thumbnail_width }}&times;{{ image.thumbnail_height }}
+                <span class="text-muted">&middot; {{ image.thumbnail_bytes|human_size }}</span>
+              </span>
+            </div>
+
+            <div class="d-flex gap-2 mt-auto">
+              <button type="button" class="btn btn-sm btn-outline-primary flex-grow-1"
+                      data-bs-toggle="modal" data-bs-target="#compareModal"
+                      data-original="{{ url_for('static', filename=image.original_path) }}"
+                      data-thumbnail="{{ url_for('static', filename=image.thumbnail_path) }}"
+                      data-filename="{{ image.original_filename }}"
+                      data-original-info="{{ image.original_width }}&times;{{ image.original_height }} &middot; {{ image.original_bytes|human_size }}"
+                      data-thumbnail-info="{{ image.thumbnail_width }}&times;{{ image.thumbnail_height }} &middot; {{ image.thumbnail_bytes|human_size }}">
+                <i class="bi bi-arrow-left-right me-1"></i>Compare
+              </button>
+              <a href="{{ url_for('static', filename=image.original_path) }}" target="_blank"
+                 class="btn btn-sm btn-outline-secondary" title="Open original in a new tab">
+                <i class="bi bi-box-arrow-up-right"></i>
+              </a>
+            </div>
+
+            <div class="section-sub mt-2">
+              <i class="bi bi-clock me-1"></i>{{ image.uploaded_at.strftime('%d %b %Y, %H:%M') }}
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="modal fade" id="compareModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <h5 class="modal-title" id="compareTitle">Compare</h5>
+            <div class="section-sub">Both images are drawn to the same scale</div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-4 align-items-start">
+            <div class="col-md-6 text-center">
+              <div class="fw-semibold">Original</div>
+              <div class="section-sub mb-2" id="compareOriginalInfo"></div>
+              <img id="compareOriginal" class="border rounded"
+                   style="width: 100%; height: auto;" alt="Original">
+            </div>
+            <div class="col-md-6 text-center">
+              <div class="fw-semibold">Thumbnail <span class="text-muted">(50%)</span></div>
+              <div class="section-sub mb-2" id="compareThumbnailInfo"></div>
+              <img id="compareThumbnail" class="border rounded"
+                   style="width: 50%; height: auto;" alt="Thumbnail">
+            </div>
+          </div>
+          <p class="section-sub mt-3 mb-0">
+            The thumbnail appears half as wide and half as tall as the original, matching
+            its real pixel dimensions shown above.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.getElementById('compareModal').addEventListener('show.bs.modal', function (event) {
+    const btn = event.relatedTarget;
+    document.getElementById('compareTitle').textContent = btn.dataset.filename;
+    document.getElementById('compareOriginal').src = btn.dataset.original;
+    document.getElementById('compareThumbnail').src = btn.dataset.thumbnail;
+    document.getElementById('compareOriginalInfo').innerHTML = btn.dataset.originalInfo;
+    document.getElementById('compareThumbnailInfo').innerHTML = btn.dataset.thumbnailInfo;
+  });
+
+  document.getElementById('imageInput').addEventListener('change', function () {
+    document.getElementById('uploadLabel').textContent =
+      this.files.length ? this.files[0].name : 'Choose an image to upload';
+  });
+</script>
+{% endblock %}

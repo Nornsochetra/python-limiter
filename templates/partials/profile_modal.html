@@ -1,0 +1,102 @@
+<div class="modal fade" id="profileModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('edit_profile') }}" enctype="multipart/form-data">
+        <div class="modal-header">
+          <div>
+            <h5 class="modal-title">My Profile</h5>
+            <div class="section-sub">Update your details and profile picture</div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+          <input type="hidden" name="next" value="{{ request.path }}">
+
+          <div class="text-center mb-4">
+            <div class="avatar-edit">
+              {% if current_user.avatar_path %}
+                <img id="avatarPreview" class="avatar-lg"
+                     src="{{ url_for('static', filename=current_user.avatar_path) }}" alt="Avatar">
+              {% else %}
+                <img id="avatarPreview" class="avatar-lg d-none" alt="Avatar">
+                <span id="avatarPlaceholder" class="avatar-lg">
+                  <i class="bi bi-person-fill"></i>
+                </span>
+              {% endif %}
+
+              <label for="avatarInput" class="camera" title="Change picture">
+                <i class="bi bi-camera-fill"></i>
+              </label>
+              <input type="file" id="avatarInput" name="avatar" accept="image/*" class="d-none">
+            </div>
+
+            <div class="section-sub mt-2">
+              <span id="avatarHint">Click the camera to change your picture</span>
+            </div>
+            <div class="section-sub">
+              <span class="badge rounded-pill text-bg-light border mt-2">
+                {{ "Administrator" if current_user.is_admin else "Standard user" }}
+              </span>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Username</label>
+            <div class="input-icon">
+              <i class="bi bi-person"></i>
+              <input class="form-control" type="text" name="username"
+                     value="{{ current_user.username }}" required>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Email</label>
+            <div class="input-icon">
+              <i class="bi bi-envelope"></i>
+              <input class="form-control" type="email" name="email"
+                     value="{{ current_user.email }}" required>
+            </div>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label small fw-semibold">New password</label>
+            <div class="input-icon">
+              <i class="bi bi-lock"></i>
+              <input class="form-control" type="password" name="password"
+                     placeholder="Leave blank to keep current" minlength="6">
+            </div>
+          </div>
+
+          <div class="section-sub">
+            <i class="bi bi-calendar3 me-1"></i>Joined
+            {{ current_user.created_at.strftime('%d %b %Y') }}
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check2 me-1"></i>Save changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('avatarInput').addEventListener('change', function () {
+    const file = this.files[0];
+    if (!file) return;
+
+    const preview = document.getElementById('avatarPreview');
+    const placeholder = document.getElementById('avatarPlaceholder');
+
+    preview.src = URL.createObjectURL(file);
+    preview.classList.remove('d-none');
+    if (placeholder) placeholder.classList.add('d-none');
+
+    document.getElementById('avatarHint').textContent = file.name;
+  });
+</script>

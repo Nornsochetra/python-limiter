@@ -1,0 +1,34 @@
+# --- Secrets: never commit these ---
+# .env holds the database password and SECRET_KEY.
+# .env.example IS committed, as the template others copy from.
+.env
+.env.local
+.env.*.local
+
+# --- Python ---
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# --- Flask ---
+instance/
+*.log
+
+# --- Uploaded files (user content, not source code) ---
+# The folders are kept via .gitkeep so the app can write into them on a fresh clone.
+static/uploads/originals/*
+static/uploads/thumbnails/*
+static/uploads/avatars/*
+!static/uploads/originals/.gitkeep
+!static/uploads/thumbnails/.gitkeep
+!static/uploads/avatars/.gitkeep
+
+# --- Editors / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

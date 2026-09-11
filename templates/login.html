@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+{% block heading %}Welcome back{% endblock %}
+{% block subheading %}Sign in to continue to your dashboard{% endblock %}
+
+{% block content %}
+  <form method="POST">
+    <div class="mb-3">
+      <label class="form-label">Username</label>
+      <div class="input-icon">
+        <i class="bi bi-person"></i>
+        <input class="form-control" type="text" name="username"
+               placeholder="Your username" required autofocus>
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <label class="form-label">Password</label>
+      <div class="input-icon">
+        <i class="bi bi-lock"></i>
+        <input class="form-control" type="password" name="password"
+               placeholder="Your password" required>
+      </div>
+    </div>
+
+    <button class="btn btn-primary w-100 py-2" type="submit">
+      <i class="bi bi-box-arrow-in-right me-1"></i>Sign in
+    </button>
+  </form>
+{% endblock %}
+
+{% block auth_foot %}
+  Don't have an account?
+  <a href="{{ url_for('register') }}" class="fw-semibold text-decoration-none">Create one</a>
+{% endblock %}
