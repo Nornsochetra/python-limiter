@@ -457,8 +457,10 @@ body {
   border-radius: 999px;
 }
 
-.tag-ip   { background: #fef4e6; color: #b45309; }
-.tag-user { background: #e8f1fe; color: #1d4ed8; }
+.tag-ip      { background: #fef4e6; color: #b45309; }
+.tag-user    { background: #e8f1fe; color: #1d4ed8; }
+.tag-blocked { background: #fdeaea; color: #b91c1c; }
+.tag-allowed { background: #e7f7ee; color: #0f7a43; }
 
 .empty-state {
   text-align: center;

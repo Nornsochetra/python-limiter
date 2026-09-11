@@ -140,7 +140,7 @@ Open **http://127.0.0.1:5000** in your browser. On first run the app creates the
 |---|---|
 | **Dashboard** | Upload an image (a 50% thumbnail is generated automatically). Each card lists the original and thumbnail dimensions + file sizes, and **Compare** opens them side by side |
 | **Avatar menu → Profile** | A popup to change your username, email, password, and profile picture |
-| **Sidebar → Limit Log** | *(admin only)* Every time someone gets rate limited, it's recorded here |
+| **Sidebar → Limit Log** | *(admin only)* Every request to a rate limited page is recorded here, marked **allowed** or **blocked**, with filter tabs for each |
 
 ---
 
@@ -151,11 +151,18 @@ Open **http://127.0.0.1:5000** in your browser. On first run the app creates the
 | **5 per minute per IP** | Login and Register pages | Refresh or submit either page 6 times in a minute |
 | **10 per minute per user** | Limit Log page (admin) | Refresh the Limit Log page 11 times in a minute |
 
-When you go over, you get a **429 "Too Many Requests"** page, and a row is written to the
-`rate_limit_logs` table — visible in the admin **Limit Log** page.
+When you go over, you get a **429 "Too Many Requests"** page showing a **live countdown**
+of the real time left on your block — it ticks down each second and reloads the page by
+itself once you're free, so you never have to guess or keep retrying. A row is also
+written to the `rate_limit_logs` table, visible in the admin **Limit Log** page.
 
 > Note: page *views* count too, not just form submissions — so simply refreshing the login
 > page 6 times will lock you out of it for 60 seconds. This is intentional.
+>
+> Because of this, a **failed** login costs 2 requests (the submit, plus the reload that
+> shows the error message), and opening the page costs 1. So in practice you get about
+> two wrong-password tries per minute before the limit kicks in. Wait 60 seconds and the
+> 429 page will let you back in automatically.
 
 ---
 

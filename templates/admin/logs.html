@@ -1,57 +1,68 @@
 {% extends "sidebar_base.html" %}
 {% block title %}Rate Limit Logs{% endblock %}
 {% block page_title %}Limit Log{% endblock %}
-{% block page_sub %}Every request that was blocked by a rate limit{% endblock %}
+{% block page_sub %}Every request to a rate limited endpoint, allowed or blocked{% endblock %}
 
 {% block content %}
-  {% set ip_count = logs | selectattr('limit_type', 'equalto', 'ip') | list | length %}
-  {% set user_count = logs | selectattr('limit_type', 'equalto', 'user') | list | length %}
-
   <div class="row row-cols-1 row-cols-sm-3 g-3 mb-4">
     <div class="col">
       <div class="card-soft stat-card">
         <span class="stat-icon indigo"><i class="bi bi-list-ul"></i></span>
         <div>
-          <div class="stat-value">{{ logs|length }}</div>
-          <div class="stat-label">Total breaches</div>
+          <div class="stat-value">{{ counts.all }}</div>
+          <div class="stat-label">Total attempts</div>
         </div>
       </div>
     </div>
     <div class="col">
       <div class="card-soft stat-card">
-        <span class="stat-icon amber"><i class="bi bi-hdd-network"></i></span>
+        <span class="stat-icon green"><i class="bi bi-check-circle"></i></span>
         <div>
-          <div class="stat-value">{{ ip_count }}</div>
-          <div class="stat-label">By IP &middot; login / register</div>
+          <div class="stat-value">{{ counts.allowed }}</div>
+          <div class="stat-label">Allowed</div>
         </div>
       </div>
     </div>
     <div class="col">
       <div class="card-soft stat-card">
-        <span class="stat-icon green"><i class="bi bi-person-badge"></i></span>
+        <span class="stat-icon amber"><i class="bi bi-shield-exclamation"></i></span>
         <div>
-          <div class="stat-value">{{ user_count }}</div>
-          <div class="stat-label">By user &middot; admin pages</div>
+          <div class="stat-value">{{ counts.blocked }}</div>
+          <div class="stat-label">Blocked (429)</div>
         </div>
       </div>
     </div>
   </div>
 
   <div class="card-soft">
-    <div class="d-flex align-items-center justify-content-between px-3 px-md-4 py-3 border-bottom">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 px-3 px-md-4 py-3 border-bottom">
       <div>
-        <div class="section-title">Blocked requests</div>
+        <div class="section-title">Requests</div>
         <div class="section-sub">Newest first &middot; showing up to 200 entries</div>
       </div>
-      <span class="badge rounded-pill text-bg-light border">{{ logs|length }}</span>
+
+      <div class="btn-group btn-group-sm" role="group">
+        <a href="{{ url_for('admin_logs') }}"
+           class="btn {{ 'btn-primary' if show == 'all' else 'btn-outline-secondary' }}">
+          All <span class="badge text-bg-light ms-1">{{ counts.all }}</span>
+        </a>
+        <a href="{{ url_for('admin_logs', show='blocked') }}"
+           class="btn {{ 'btn-primary' if show == 'blocked' else 'btn-outline-secondary' }}">
+          Blocked <span class="badge text-bg-light ms-1">{{ counts.blocked }}</span>
+        </a>
+        <a href="{{ url_for('admin_logs', show='allowed') }}"
+           class="btn {{ 'btn-primary' if show == 'allowed' else 'btn-outline-secondary' }}">
+          Allowed <span class="badge text-bg-light ms-1">{{ counts.allowed }}</span>
+        </a>
+      </div>
     </div>
 
     {% if not logs %}
       <div class="empty-state">
         <i class="bi bi-shield-check"></i>
-        No rate limit breaches recorded yet.
+        Nothing recorded for this filter yet.
         <div class="small mt-2">
-          Refresh the login page 6 times in a minute to trigger one.
+          Refresh the login page 6 times in a minute to produce a block.
         </div>
       </div>
     {% else %}
@@ -60,6 +71,7 @@
           <thead>
             <tr>
               <th>Time</th>
+              <th>Status</th>
               <th>Type</th>
               <th>IP address</th>
               <th>User</th>
@@ -70,6 +82,17 @@
             {% for log in logs %}
               <tr>
                 <td class="text-nowrap">{{ log.created_at.strftime('%d %b %Y, %H:%M:%S') }}</td>
+                <td>
+                  {% if log.blocked %}
+                    <span class="tag tag-blocked">
+                      <i class="bi bi-x-circle-fill me-1"></i>blocked
+                    </span>
+                  {% else %}
+                    <span class="tag tag-allowed">
+                      <i class="bi bi-check-circle-fill me-1"></i>allowed
+                    </span>
+                  {% endif %}
+                </td>
                 <td>
                   <span class="tag {{ 'tag-ip' if log.limit_type == 'ip' else 'tag-user' }}">
                     {{ log.limit_type }}

@@ -1,6 +1,8 @@
 import os
+import time
 import uuid
 from functools import wraps
+from math import ceil
 
 from flask import Flask, render_template, request, redirect, url_for, flash, abort
 from flask_login import (
@@ -53,30 +55,48 @@ def user_id_key():
     return str(current_user.id)
 
 
-def log_rate_limit_breach(limit_type):
-    """Returns an on_breach callback that records the block to RateLimitLog."""
-    def _callback(request_limit):
-        log_entry = RateLimitLog(
+# the rate limited endpoints, and what each limit counts per.
+# keep this in sync with the @limiter.limit decorators below.
+RATE_LIMITED_ENDPOINTS = {
+    "login": "ip",
+    "register": "ip",
+    "dashboard": "user",
+    "admin_logs": "user",
+}
+
+
+@app.after_request
+def log_rate_limited_request(response):
+    """Record every request to a rate limited endpoint, whether it was allowed
+    or blocked, so the log shows the attempts leading up to a block."""
+    limit_type = RATE_LIMITED_ENDPOINTS.get(request.endpoint)
+    if limit_type is None:
+        return response
+
+    db.session.add(
+        RateLimitLog(
             ip_address=request.remote_addr or "unknown",
             user_id=current_user.id if current_user.is_authenticated else None,
-            endpoint=request.endpoint or request.path,
+            endpoint=request.endpoint,
             limit_type=limit_type,
+            blocked=response.status_code == 429,
         )
-        db.session.add(log_entry)
-        db.session.commit()
-    return _callback
+    )
+    db.session.commit()
+    return response
 
 
 @app.errorhandler(429)
 def ratelimit_handler(e):
-    # e.limit.limit is the rate limit item, e.g. "5 per 1 minute" -> 60 second window
-    window_seconds = e.limit.limit.get_expiry()
+    # how many seconds are actually left in this window, so the page can count
+    # down to the exact moment the user is free again
+    seconds_left = max(0, ceil(limiter.current_limit.window.reset_time - time.time()))
     response = render_template(
         "rate_limited.html",
         message=str(e.description),
-        retry_after=window_seconds,
+        seconds_left=seconds_left,
     )
-    return response, 429, {"Retry-After": str(window_seconds)}
+    return response, 429, {"Retry-After": str(seconds_left)}
 
 
 # make sure the upload folders exist
@@ -94,7 +114,7 @@ def index():
 
 
 @app.route("/register", methods=["GET", "POST"])
-@limiter.limit("5/minute", on_breach=log_rate_limit_breach("ip"))
+@limiter.limit("5/minute")
 def register():
     if current_user.is_authenticated:
         return redirect(url_for("dashboard"))
@@ -135,7 +155,7 @@ def register():
 
 
 @app.route("/login", methods=["GET", "POST"])
-@limiter.limit("5/minute", on_breach=log_rate_limit_breach("ip"))
+@limiter.limit("5/minute")
 def login():
     if current_user.is_authenticated:
         return redirect(url_for("dashboard"))
@@ -167,6 +187,7 @@ def logout():
 
 @app.route("/admin/dashboard")
 @login_required
+@limiter.limit("10/minute", key_func=user_id_key)
 def dashboard():
     images = (
         Image.query.filter_by(user_id=current_user.id)
@@ -178,7 +199,7 @@ def dashboard():
         stats = {
             "user_count": User.query.count(),
             "image_count": Image.query.count(),
-            "breach_count": RateLimitLog.query.count(),
+            "breach_count": RateLimitLog.query.filter_by(blocked=True).count(),
         }
     return render_template("dashboard.html", images=images, stats=stats)
 
@@ -281,10 +302,24 @@ def upload():
 @app.route("/admin/logs")
 @login_required
 @admin_required
-@limiter.limit("10/minute", key_func=user_id_key, on_breach=log_rate_limit_breach("user"))
+@limiter.limit("10/minute", key_func=user_id_key)
 def admin_logs():
-    logs = RateLimitLog.query.order_by(RateLimitLog.created_at.desc()).limit(200).all()
-    return render_template("admin/logs.html", logs=logs)
+    show = request.args.get("show", "all")
+
+    query = RateLimitLog.query
+    if show == "blocked":
+        query = query.filter_by(blocked=True)
+    elif show == "allowed":
+        query = query.filter_by(blocked=False)
+
+    logs = query.order_by(RateLimitLog.created_at.desc()).limit(200).all()
+
+    counts = {
+        "all": RateLimitLog.query.count(),
+        "blocked": RateLimitLog.query.filter_by(blocked=True).count(),
+        "allowed": RateLimitLog.query.filter_by(blocked=False).count(),
+    }
+    return render_template("admin/logs.html", logs=logs, counts=counts, show=show)
 
 
 if __name__ == "__main__":

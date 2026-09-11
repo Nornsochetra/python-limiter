@@ -57,4 +57,5 @@ class RateLimitLog(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     endpoint = db.Column(db.String(120), nullable=False)
     limit_type = db.Column(db.String(20), nullable=False)  # "ip" or "user"
+    blocked = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

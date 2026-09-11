@@ -23,26 +23,76 @@
       <div class="section-sub mb-3">Too many requests</div>
 
       <p class="mb-3">
-        You've made too many requests in a short time. Please wait a moment and try again.
+        You've hit the rate limit. You'll be able to continue automatically when the
+        timer below runs out.
       </p>
+
+      <div id="countdownBox" class="card-soft p-3 mb-3" data-seconds="{{ seconds_left }}">
+        <div class="section-sub">Try again in</div>
+        <div id="countdown" class="fw-bold" style="font-size:2.4rem; line-height:1.2;">
+          --:--
+        </div>
+        <div class="progress mt-2" style="height:6px;">
+          <div id="countdownBar" class="progress-bar bg-warning" style="width:100%"></div>
+        </div>
+      </div>
 
       <div class="card-soft p-3 mb-4 text-start">
         <div class="spec">
           <span class="k">Limit</span>
           <span class="v">{{ message }}</span>
         </div>
-        {% if retry_after %}
-          <div class="spec">
-            <span class="k">Try again in</span>
-            <span class="v">up to {{ retry_after }} seconds</span>
-          </div>
-        {% endif %}
       </div>
 
-      <a href="{{ url_for('index') }}" class="btn btn-primary w-100 py-2">
-        <i class="bi bi-arrow-left me-1"></i>Go back
+      <a id="retryBtn" href="{{ request.path }}"
+         class="btn btn-primary w-100 py-2 disabled" aria-disabled="true">
+        <i class="bi bi-arrow-clockwise me-1"></i>Waiting...
       </a>
     </div>
   </div>
+
+  <script>
+    (function () {
+      const box = document.getElementById('countdownBox');
+      const label = document.getElementById('countdown');
+      const bar = document.getElementById('countdownBar');
+      const btn = document.getElementById('retryBtn');
+
+      const total = parseInt(box.dataset.seconds, 10) || 0;
+      let left = total;
+
+      function render() {
+        const m = Math.floor(left / 60);
+        const s = left % 60;
+        label.textContent = m + ':' + String(s).padStart(2, '0');
+        bar.style.width = total ? (left / total * 100) + '%' : '0%';
+      }
+
+      function enableRetry() {
+        box.classList.add('d-none');
+        btn.classList.remove('disabled');
+        btn.removeAttribute('aria-disabled');
+        btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Try again';
+      }
+
+      render();
+
+      // already expired: just offer the button, never auto-reload (that could loop)
+      if (left <= 0) {
+        enableRetry();
+        return;
+      }
+
+      const timer = setInterval(function () {
+        left -= 1;
+        render();
+        if (left <= 0) {
+          clearInterval(timer);
+          enableRetry();
+          location.reload();
+        }
+      }, 1000);
+    })();
+  </script>
 </body>
 </html>
